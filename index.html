@@ -46,113 +46,133 @@
       color: white;
       font-family: Arial, sans-serif;
     }
+
+    #startButton {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      padding: 20px 40px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
   <canvas id="canvas"></canvas>
-  <div id="countdown">10</div>
+  <button id="startButton" onclick="startExperience()">Start Celebration</button>
+  <div id="countdown" style="display:none;">10</div>
   <div id="message">Happy Birthday, Gunjan! 🎂</div>
   <audio id="audio" src="happy_birthday_harmonica.mp3.mpeg" preload="auto" muted></audio>
 
   <script>
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    function startExperience() {
+      document.getElementById('startButton').style.display = 'none';
+      const audio = document.getElementById('audio');
+      audio.muted = false;
 
-    const particles = [];
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
 
-    const image = new Image();
-    image.src = 'gunjan_20190425_074015.jpg';
-    image.onload = function() {
-      ctx.drawImage(image, canvas.width / 4, canvas.height / 4, canvas.width / 2, canvas.height / 2);
-      createOutline();
-    };
+      const particles = [];
 
-    function createOutline() {
-      const imgData = ctx.getImageData(canvas.width / 4, canvas.height / 4, canvas.width / 2, canvas.height / 2);
-      const data = imgData.data;
+      const image = new Image();
+      image.src = 'gunjan_20190425_074015.jpg';
+      image.onload = function() {
+        ctx.drawImage(image, canvas.width / 4, canvas.height / 4, canvas.width / 2, canvas.height / 2);
+        createOutline();
+      };
 
-      for (let i = 0; i < data.length; i += 4) {
-        const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        if (brightness < 128) {
-          data[i] = 255;
-          data[i + 1] = 255;
-          data[i + 2] = 255;
-          data[i + 3] = 255;
-        } else {
-          data[i + 3] = 0;
+      function createOutline() {
+        const imgData = ctx.getImageData(canvas.width / 4, canvas.height / 4, canvas.width / 2, canvas.height / 2);
+        const data = imgData.data;
+
+        for (let i = 0; i < data.length; i += 4) {
+          const brightness = (data[i] + data[i + 1] + data[i + 2]) / 3;
+          if (brightness < 128) {
+            data[i] = 255;
+            data[i + 1] = 255;
+            data[i + 2] = 255;
+            data[i + 3] = 255;
+          } else {
+            data[i + 3] = 0;
+          }
+        }
+
+        ctx.putImageData(imgData, canvas.width / 4, canvas.height / 4);
+      }
+
+      class Particle {
+        constructor(x, y) {
+          this.x = x;
+          this.y = y;
+          this.size = Math.random() * 6 + 2;
+          this.speedX = Math.random() * 4 - 2;
+          this.speedY = Math.random() * 4 - 2;
+          this.color = `hsl(${Math.random() * 360}, 100%, 60%)`;
+        }
+
+        update() {
+          this.x += this.speedX;
+          this.y += this.speedY;
+
+          if (this.size > 0.2) this.size -= 0.1;
+        }
+
+        draw() {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fillStyle = this.color;
+          ctx.fill();
         }
       }
 
-      ctx.putImageData(imgData, canvas.width / 4, canvas.height / 4);
+      function createParticles(e) {
+        for (let i = 0; i < 15; i++) {
+          particles.push(new Particle(e.x || canvas.width / 2, e.y || canvas.height / 2));
+        }
+      }
+
+      function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        particles.forEach((particle, index) => {
+          particle.update();
+          particle.draw();
+
+          if (particle.size <= 0.2) particles.splice(index, 1);
+        });
+
+        requestAnimationFrame(animate);
+      }
+
+      animate();
+      setInterval(() => createParticles({ x: Math.random() * canvas.width, y: Math.random() * canvas.height }), 100);
+
+      let countdown = 10;
+      const countdownEl = document.getElementById('countdown');
+      countdownEl.style.display = 'block';
+
+      const timer = setInterval(() => {
+        countdown--;
+        countdownEl.textContent = countdown;
+        
+        if (countdown <= 0) {
+          clearInterval(timer);
+          countdownEl.style.display = 'none';
+          audio.play().catch(error => console.log('Audio play failed:', error));
+          document.getElementById('message').style.opacity = 1;
+          createOutline();
+        }
+      }, 1000);
     }
-
-    class Particle {
-      constructor(x, y) {
-        this.x = x;
-        this.y = y;
-        this.size = Math.random() * 6 + 2;
-        this.speedX = Math.random() * 4 - 2;
-        this.speedY = Math.random() * 4 - 2;
-        this.color = `hsl(${Math.random() * 360}, 100%, 60%)`;
-      }
-
-      update() {
-        this.x += this.speedX;
-        this.y += this.speedY;
-
-        if (this.size > 0.2) this.size -= 0.1;
-      }
-
-      draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-      }
-    }
-
-    function createParticles(e) {
-      for (let i = 0; i < 15; i++) {
-        particles.push(new Particle(e.x || canvas.width / 2, e.y || canvas.height / 2));
-      }
-    }
-
-    function animate() {
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-      particles.forEach((particle, index) => {
-        particle.update();
-        particle.draw();
-
-        if (particle.size <= 0.2) particles.splice(index, 1);
-      });
-
-      requestAnimationFrame(animate);
-    }
-
-    animate();
-    setInterval(() => createParticles({ x: Math.random() * canvas.width, y: Math.random() * canvas.height }), 100);
-
-    let countdown = 10;
-    const countdownEl = document.getElementById('countdown');
-
-    const timer = setInterval(() => {
-      countdown--;
-      countdownEl.textContent = countdown;
-      
-      if (countdown <= 0) {
-        clearInterval(timer);
-        countdownEl.style.display = 'none';
-        const audio = document.getElementById('audio');
-        audio.muted = false;
-        audio.play().catch(error => console.log('Audio play failed:', error));
-        document.getElementById('message').style.opacity = 1;
-        createOutline();
-      }
-    }, 1000);
   </script>
 </body>
 </html>
